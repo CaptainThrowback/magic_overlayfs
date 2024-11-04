@@ -10,14 +10,18 @@ OVERLAYDIR="/data/adb/overlay"
 OVERLAYMNT="/dev/mount_overlayfs"
 MODULEMNT="/dev/mount_loop"
 
+# find writables
+[ -w /cache ] && logfile=/cache/overlayfs.log
+[ -w /debug_ramdisk ] && logfile=/debug_ramdisk/overlayfs.log
+
 # overlay_system <writeable-dir>
 . "$MODDIR/mode.sh"
 
-# mv -fT /debug_ramdisk/overlayfs.log /debug_ramdisk/overlayfs.log.bak
-rm -rf /debug_ramdisk/overlayfs.log
-echo "--- Start debugging log ---" >/debug_ramdisk/overlayfs.log
-echo "init mount namespace: $(readlink /proc/1/ns/mnt)" >>/debug_ramdisk/overlayfs.log
-echo "current mount namespace: $(readlink /proc/self/ns/mnt)" >>/debug_ramdisk/overlayfs.log
+# mv -fT "$logfile" "$logfile".bak
+rm -rf "$logfile"
+echo "--- Start debugging log ---" >"$logfile"
+echo "init mount namespace: $(readlink /proc/1/ns/mnt)" >>"$logfile"
+echo "current mount namespace: $(readlink /proc/self/ns/mnt)" >>"$logfile"
 
 mkdir -p "$OVERLAYMNT"
 mkdir -p "$OVERLAYDIR"
@@ -51,7 +55,7 @@ if [ -f "$OVERLAYDIR" ]; then
 fi
 
 if ! "$MODDIR/overlayfs_system" --test --check-ext4 "$OVERLAYMNT"; then
-    echo "unable to mount writeable dir" >>/debug_ramdisk/overlayfs.log
+    echo "unable to mount writeable dir" >>"$logfile"
     exit
 fi
 
@@ -64,7 +68,7 @@ for i in $MODULE_LIST; do
         if [ -f "$i/overlay.img" ]; then
             loop_setup "$i/overlay.img"
             if [ ! -z "$LOOPDEV" ]; then
-                echo "mount overlayfs for module: $module_name" >>/debug_ramdisk/overlayfs.log
+                echo "mount overlayfs for module: $module_name" >>"$logfile"
                 mkdir -p "$MODULEMNT/$num"
                 mount -o rw -t ext4 "$LOOPDEV" "$MODULEMNT/$num"
             fi
@@ -93,11 +97,13 @@ mkdir -p "$OVERLAYMNT/worker"
 
 if [ ! -z "$OVERLAYLIST" ]; then
     export OVERLAYLIST="${OVERLAYLIST::-1}"
-    echo "mount overlayfs list: [$OVERLAYLIST]" >>/debug_ramdisk/overlayfs.log
+    echo "mount overlayfs list: [$OVERLAYLIST]" >>"$logfile"
 fi
 
 
-"$MODDIR/overlayfs_system" "$OVERLAYMNT" | tee -a /debug_ramdisk/overlayfs.log
+"$MODDIR/overlayfs_system" "$OVERLAYMNT" | tee -a "$logfile"
+# best time here, might be nice to change tag on main.cpp?
+for i in $(grep "overlay /" /proc/mounts | cut -f2 -d " "); do echo "adding $i to sus_mount" >> "$logfile"; /data/adb/ksu/bin/ksu_susfs add_sus_mount $i > /dev/null 2>&1 ; done &
 
 if [ ! -z "$MAGISKTMP" ]; then
     mkdir -p "$MAGISKTMP/overlayfs_mnt"
@@ -111,8 +117,8 @@ umount -l "$MODULEMNT"
 rmdir "$MODULEMNT"
 
 rm -rf /dev/.overlayfs_service_unblock
-echo "--- Mountinfo (post-fs-data) ---" >>/debug_ramdisk/overlayfs.log
-cat /proc/mounts >>/debug_ramdisk/overlayfs.log
+echo "--- Mountinfo (post-fs-data) ---" >>"$logfile"
+cat /proc/mounts >>"$logfile"
 (
     # block until /dev/.overlayfs_service_unblock
     while [ ! -e "/dev/.overlayfs_service_unblock" ]; do
@@ -120,7 +126,7 @@ cat /proc/mounts >>/debug_ramdisk/overlayfs.log
     done
     rm -rf /dev/.overlayfs_service_unblock
 
-    echo "--- Mountinfo (late_start) ---" >>/debug_ramdisk/overlayfs.log
-    cat /proc/mounts >>/debug_ramdisk/overlayfs.log
+    echo "--- Mountinfo (late_start) ---" >>"$logfile"
+    cat /proc/mounts >>"$logfile"
 ) &
 
