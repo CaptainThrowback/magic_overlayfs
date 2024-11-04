@@ -13,11 +13,11 @@ MODULEMNT="/dev/mount_loop"
 # overlay_system <writeable-dir>
 . "$MODDIR/mode.sh"
 
-# mv -fT /cache/overlayfs.log /cache/overlayfs.log.bak
-rm -rf /cache/overlayfs.log
-echo "--- Start debugging log ---" >/cache/overlayfs.log
-echo "init mount namespace: $(readlink /proc/1/ns/mnt)" >>/cache/overlayfs.log
-echo "current mount namespace: $(readlink /proc/self/ns/mnt)" >>/cache/overlayfs.log
+# mv -fT /debug_ramdisk/overlayfs.log /debug_ramdisk/overlayfs.log.bak
+rm -rf /debug_ramdisk/overlayfs.log
+echo "--- Start debugging log ---" >/debug_ramdisk/overlayfs.log
+echo "init mount namespace: $(readlink /proc/1/ns/mnt)" >>/debug_ramdisk/overlayfs.log
+echo "current mount namespace: $(readlink /proc/self/ns/mnt)" >>/debug_ramdisk/overlayfs.log
 
 mkdir -p "$OVERLAYMNT"
 mkdir -p "$OVERLAYDIR"
@@ -51,7 +51,7 @@ if [ -f "$OVERLAYDIR" ]; then
 fi
 
 if ! "$MODDIR/overlayfs_system" --test --check-ext4 "$OVERLAYMNT"; then
-    echo "unable to mount writeable dir" >>/cache/overlayfs.log
+    echo "unable to mount writeable dir" >>/debug_ramdisk/overlayfs.log
     exit
 fi
 
@@ -64,7 +64,7 @@ for i in $MODULE_LIST; do
         if [ -f "$i/overlay.img" ]; then
             loop_setup "$i/overlay.img"
             if [ ! -z "$LOOPDEV" ]; then
-                echo "mount overlayfs for module: $module_name" >>/cache/overlayfs.log
+                echo "mount overlayfs for module: $module_name" >>/debug_ramdisk/overlayfs.log
                 mkdir -p "$MODULEMNT/$num"
                 mount -o rw -t ext4 "$LOOPDEV" "$MODULEMNT/$num"
             fi
@@ -93,11 +93,11 @@ mkdir -p "$OVERLAYMNT/worker"
 
 if [ ! -z "$OVERLAYLIST" ]; then
     export OVERLAYLIST="${OVERLAYLIST::-1}"
-    echo "mount overlayfs list: [$OVERLAYLIST]" >>/cache/overlayfs.log
+    echo "mount overlayfs list: [$OVERLAYLIST]" >>/debug_ramdisk/overlayfs.log
 fi
 
 
-"$MODDIR/overlayfs_system" "$OVERLAYMNT" | tee -a /cache/overlayfs.log
+"$MODDIR/overlayfs_system" "$OVERLAYMNT" | tee -a /debug_ramdisk/overlayfs.log
 
 if [ ! -z "$MAGISKTMP" ]; then
     mkdir -p "$MAGISKTMP/overlayfs_mnt"
@@ -111,8 +111,8 @@ umount -l "$MODULEMNT"
 rmdir "$MODULEMNT"
 
 rm -rf /dev/.overlayfs_service_unblock
-echo "--- Mountinfo (post-fs-data) ---" >>/cache/overlayfs.log
-cat /proc/mounts >>/cache/overlayfs.log
+echo "--- Mountinfo (post-fs-data) ---" >>/debug_ramdisk/overlayfs.log
+cat /proc/mounts >>/debug_ramdisk/overlayfs.log
 (
     # block until /dev/.overlayfs_service_unblock
     while [ ! -e "/dev/.overlayfs_service_unblock" ]; do
@@ -120,7 +120,7 @@ cat /proc/mounts >>/cache/overlayfs.log
     done
     rm -rf /dev/.overlayfs_service_unblock
 
-    echo "--- Mountinfo (late_start) ---" >>/cache/overlayfs.log
-    cat /proc/mounts >>/cache/overlayfs.log
+    echo "--- Mountinfo (late_start) ---" >>/debug_ramdisk/overlayfs.log
+    cat /proc/mounts >>/debug_ramdisk/overlayfs.log
 ) &
 
