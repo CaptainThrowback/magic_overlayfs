@@ -102,8 +102,8 @@ fi
 
 
 "$MODDIR/overlayfs_system" "$OVERLAYMNT" | tee -a "$logfile"
-# best time here, might be nice to change tag on main.cpp?
-for i in $(grep "overlay /" /proc/mounts | cut -f2 -d " "); do echo "adding $i to sus_mount" >> "$logfile"; /data/adb/ksu/bin/ksu_susfs add_sus_mount $i > /dev/null 2>&1 ; done &
+# best time here
+for i in $(grep "magic_overlayfs" /proc/mounts | cut -f2 -d " "); do /data/adb/ksu/bin/ksu_susfs add_sus_mount $i > /dev/null 2>&1 ; done &
 
 if [ ! -z "$MAGISKTMP" ]; then
     mkdir -p "$MAGISKTMP/overlayfs_mnt"
