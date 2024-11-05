@@ -6,7 +6,6 @@ touch /dev/.overlayfs_service_unblock
 # unmount KSU overlay
 if [ "$DO_UNMOUNT_KSU" ]; then
     "${0%/*}/overlayfs_system" --unmount-ksu
-    for i in $(grep "magic_overlayfs" /proc/mounts | cut -f2 -d " "); do /data/adb/ksu/bin/ksu_susfs add_sus_mount $i > /dev/null 2>&1 ; done &
     stop; start
 fi
 
@@ -31,7 +30,7 @@ case $OVERLAY_LEGACY_MOUNT in
 esac 
 
 module_list_string=$(for i in $MODULE_LIST ; do [ -d $i ] && printf "$i " | sed 's|/data/adb/modules/||g' ; done)
-string="description=mode: $mode | legacy_mount: $mount | size: $OVERLAY_SIZE"M" 💾 | modules: $module_list_string "
+string="description=mode: $mode | legacy_mount: $mount | modules: $module_list_string "
 sed -i "s/^description=.*/$string/g" $MODDIR/module.prop
 
 # EOF
