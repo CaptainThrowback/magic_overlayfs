@@ -13,7 +13,7 @@ export DO_UNMOUNT_KSU=true
 
 # set overlay.img size in megabytes, 500 set by default.
 # this is only on fresh install.
-export OVERLAY_SIZE=500
+export OVERLAY_SIZE=200M
 
 # list your modules that you want globally mounted
 # some examples 
