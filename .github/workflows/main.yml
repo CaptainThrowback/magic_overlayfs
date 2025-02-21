@@ -26,7 +26,7 @@ jobs:
         chmod 777 ./build.sh
         ./build.sh
     - name: Upload release
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: magisk-overlayfs-release
         path: out/magisk-module
